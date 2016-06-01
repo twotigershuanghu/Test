@@ -1,0 +1,68 @@
+<!doctype html>
+<html><head>
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0, maximum-scale=1.0">
+	<style type='text/css'>
+		html { font-family:Helvetica; color:#222; }
+		h1 { color:steelblue; font-size:24px; margin-top:24px; }
+		button { margin:0 3px 10px; font-size:12px; }
+		.logLine { border-bottom:1px solid #ccc; padding:4px 2px; font-family:courier; font-size:11px; }
+	</style>
+</head><body>
+	<h1>WebViewJavascriptBridge Demo</h1>
+	<script>
+	window.onerror = function(err) {
+		log('window.onerror: ' + err)
+	}
+
+    function setupWebViewJavascriptBridge(callback) {
+        if (window.WebViewJavascriptBridge) { return callback(WebViewJavascriptBridge); }
+        if (window.WVJBCallbacks) { return window.WVJBCallbacks.push(callback); }
+        window.WVJBCallbacks = [callback];
+        var WVJBIframe = document.createElement('iframe');
+        WVJBIframe.style.display = 'none';
+        WVJBIframe.src = 'wvjbscheme://__BRIDGE_LOADED__';
+        document.documentElement.appendChild(WVJBIframe);
+        setTimeout(function() { document.documentElement.removeChild(WVJBIframe) }, 0)
+    }
+
+    setupWebViewJavascriptBridge(function(bridge) {
+		var uniqueId = 1
+		function log(message, data) {
+			var log = document.getElementById('log')
+			var el = document.createElement('div')
+			el.className = 'logLine'
+			el.innerHTML = uniqueId++ + '. ' + message + ':<br/>' + JSON.stringify(data)
+			if (log.children.length) { log.insertBefore(el, log.children[0]) }
+			else { log.appendChild(el) }
+		}
+                                 
+        // JavaScript里面注册一个方法(用 OC 调用)
+		bridge.registerHandler('testJavascriptHandler', function(data, responseCallback) {
+			log('呼叫JS -> 收到的OC端数据', data)
+                               
+                               alert('打印完毕！', data)
+                               
+			var responseData = { 'JS':' 收到回复，已经提示打印成功 ' }
+			log('回复OC -> 回复的JS端数据', responseData)
+			responseCallback(responseData)
+		})
+
+		document.body.appendChild(document.createElement('br'))
+
+                                 var callbackButton = document.getElementById('buttons').appendChild(document.createElement('button'))
+                                 callbackButton.innerHTML = 'Open WebView Activity'
+                                 callbackButton.onclick = function(e) {
+                                 e.preventDefault()
+                                 
+                                 //alert('点击了JS端的 按钮！！！');
+                                 var responseData = { 'model':'WebView','address':'http://www.baidu.com','topbar':'Y'}
+                                 log('Input Param', responseData)
+                                 // JS 调用 OC方法
+                                 bridge.callHandler('_app_activity_open', responseData, function(response) {
+                                                    log('callback', response)
+                                                    })
+		}
+	})
+	</script>
+	<div id='buttons'></div> <div id='log'></div>
+</body></html>
